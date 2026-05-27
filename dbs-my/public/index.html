@@ -1,30 +1,47 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>オンラインテスト</title>
+    <title>UNO</title>
   </head>
   <body>
-    <h1>オンライン通信テスト</h1>
-    <button id="sendBtn">サーバーに挨拶する</button>
-    <ul id="messages"></ul>
+    <div id="lobby">
+      <h2>ロビー</h2>
+      <button id="start-btn">ゲーム開始</button>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    
     <script>
-      const socket = io(); // サーバーに接続
+        // ↓ ここに書きます！これが「サーバーに接続して！」という命令です。
+        const socket = io();
 
-      const button = document.getElementById('sendBtn');
-      const messages = document.getElementById('messages');
-
-      // ボタンを押したらサーバーにデータを送る
-      button.addEventListener('click', () => {
-        socket.emit('chat message', 'こんにちは！');
+        // サーバーから人数の更新があったら
+        socket.on('lobby_update', (count) => {
+        document.getElementById('player-count').textContent = count;
+    
+        // 2人以上なら開始ボタンを押せるようにする
+        if (count >= 2) {
+          document.getElementById('start-btn').disabled = false;
+        } else {
+          document.getElementById('start-btn').disabled = true;
+        }
       });
 
-      // サーバーからデータを受け取ったら画面に表示する
-      socket.on('chat message', (msg) => {
-        const item = document.createElement('li');
-        item.textContent = msg;
-        messages.appendChild(item);
+      // 開始ボタンを押したとき
+      document.getElementById('start-btn').addEventListener('click', () => {
+        socket.emit('start_game_request');
+      });
+
+      // サーバーからエラー（満員など）が返ってきたら
+      socket.on('join_error', (msg) => {
+        document.getElementById('error-message').textContent = msg;
+      });
+
+      // ゲームが開始されたら
+      socket.on('game_started', () => {
+        // ロビー画面を隠して、ゲーム画面を表示するなどの処理
+        document.getElementById('lobby').style.display = 'none';
+        alert('ゲームスタート！');
       });
     </script>
   </body>
