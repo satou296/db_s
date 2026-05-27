@@ -17,35 +17,42 @@ socket.on('join_error', (msg) => {
   document.getElementById('error-message').textContent = msg;
 });
 
-// ゲーム開始と手札の表示
-socket.on('game_started', (myHand) => {
-  // ロビー画面を隠して、ゲーム画面を表示する
+// ゲーム開始と画面の表示
+// ※ (data) の中には { hand: [...], topCard: {...} } が入ってきます
+socket.on('game_started', (data) => {
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('game-board').style.display = 'block';
 
-  // 手札を並べるエリア（<div id="my-hand">）を取得し、中身を一旦空にする
+  // 1. 手札の表示
   const handContainer = document.getElementById('my-hand');
   handContainer.innerHTML = ''; 
-
-  // 受け取った手札データ（7枚分）をループ処理して、1枚ずつ画面に作る
-  myHand.forEach((cardData) => {
-    // 新しい <div> を作成
-    const cardElement = document.createElement('div');
-    
-    // CSSのクラス名を追加して、色をつける (例: "card red")
-    cardElement.className = `card ${cardData.color}`;
-    
-    // 画面に表示する文字を設定（特殊カードは分かりやすい文字に変換）
-    let displayText = cardData.value;
-    if (cardData.value === 'draw2') displayText = '+2';
-    if (cardData.value === 'draw4') displayText = '+4';
-    if (cardData.value === 'skip') displayText = 'Skip';
-    if (cardData.value === 'reverse') displayText = 'Rev';
-    if (cardData.value === 'wild') displayText = 'Wild';
-    
-    cardElement.textContent = displayText;
-
-    // 作ったカードを画面（handContainer）に追加する
+  data.hand.forEach((cardData) => {
+    // 下で作った「カードを作る関数」を呼び出す
+    const cardElement = createCardElement(cardData);
     handContainer.appendChild(cardElement);
   });
+
+  // 2. 場のカード（捨て札）の表示
+  const discardContainer = document.getElementById('discard-pile');
+  discardContainer.innerHTML = '';
+  const topCardElement = createCardElement(data.topCard);
+  discardContainer.appendChild(topCardElement);
 });
+
+
+// ★新規追加：カードのHTML（見た目）を作成する便利関数
+function createCardElement(cardData) {
+  const cardElement = document.createElement('div');
+  cardElement.className = `card ${cardData.color}`;
+  
+  let displayText = cardData.value;
+  if (cardData.value === 'draw2') displayText = '+2';
+  if (cardData.value === 'draw4') displayText = '+4';
+  if (cardData.value === 'skip') displayText = 'Skip';
+  if (cardData.value === 'reverse') displayText = 'Rev';
+  if (cardData.value === 'wild') displayText = 'Wild';
+  
+  cardElement.textContent = displayText;
+  
+  return cardElement;
+}

@@ -13,6 +13,22 @@ body { font-family: sans-serif; background-color: #2c3e50; color: white; text-al
   text-shadow: 1px 1px 2px black; box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
 }
 
+/* --- 場のエリアのデザイン --- */
+#field {
+  background-color: #34495e; /* 少し背景色を変えて目立たせる */
+  padding: 20px;
+  border-radius: 10px;
+  margin: 20px auto; /* 画面の中央に配置 */
+  width: 80%;
+  max-width: 400px;
+}
+
+#discard-pile {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
 .red { background-color: #ff5555; }
 .blue { background-color: #5555ff; }
 .green { background-color: #55aa55; }
