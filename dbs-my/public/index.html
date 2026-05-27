@@ -2,49 +2,22 @@
 <html>
   <head>
     <title>UNO</title>
+    <link rel="stylesheet" href="/style.css">
   </head>
   <body>
     <div id="lobby">
-      <h2>ロビー</h2>
+      <h2>UNO ロビー</h2>
       <p>現在の人数: <span id="player-count">0</span> / 4 人</p>
-      <p id="error-message" style="color: red;"></p>
-      
-      <button id="start-btn" disabled>ゲーム開始</button>
+      <p id="error-message" style="color: #ffaaaaaa;"></p>
+      <button id="start-btn" disabled style="padding: 10px 20px; font-size: 18px;">ゲーム開始</button>
+    </div>
+
+    <div id="game-board">
+      <h2>あなたの手札</h2>
+      <div id="my-hand"></div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    
-    <script>
-        // ↓ ここに書きます！これが「サーバーに接続して！」という命令です。
-        const socket = io();
-        // サーバーから人数の更新があったら
-        socket.on('lobby_update', (count) => {
-        document.getElementById('player-count').textContent = count;
-    
-        // 2人以上なら開始ボタンを押せるようにする
-        if (count >= 2) {
-          document.getElementById('start-btn').disabled = false;
-        } else {
-          document.getElementById('start-btn').disabled = true;
-        }
-      });
-
-      // 開始ボタンを押したとき
-      document.getElementById('start-btn').addEventListener('click', () => {
-        socket.emit('start_game_request');
-      });
-
-      // サーバーからエラー（満員など）が返ってきたら
-      socket.on('join_error', (msg) => {
-        document.getElementById('error-message').textContent = msg;
-      });
-
-      // ゲームが開始されたら
-      socket.on('game_started', () => {
-        // ロビー画面を隠して、ゲーム画面を表示するなどの処理
-        document.getElementById('lobby').style.display = 'none';
-        alert('ゲームスタート！');
-      });
-    </script>
+    <script src="/main.js"></script>
   </body>
 </html>
