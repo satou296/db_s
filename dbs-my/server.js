@@ -47,25 +47,40 @@ io.on('connection', (socket) => {
 
   console.log(`プレイヤー入室: ${socket.id} (現在 ${currentPlayerCount + 1}人)`);
   io.emit('lobby_update', Object.keys(gameState.players).length);
-
+  
   // --- 3. ゲーム開始要求を受け取った時 ---
   socket.on('start_game_request', () => {
     if (gameState.status !== 'waiting') return;
 
-    const count = Object.keys(gameState.players).length;
-    if (count < MIN_PLAYERS) {
+    const playerIds = Object.keys(gameState.players);
+    if (playerIds.length < MIN_PLAYERS) {
       socket.emit('join_error', '2人以上揃わないと開始できません。');
       return;
     }
 
     // ゲーム開始！
     gameState.status = 'playing';
-    
-    // デッキを生成してシャッフル
     gameState.deck = shuffleDeck(createDeck());
-    console.log(`ゲーム開始！ 山札の枚数: ${gameState.deck.length}枚`);
     
-    io.emit('game_started');
+    // 【追加1】全員に7枚ずつカードを配る
+    // トランプのように、1周ごとに1人1枚ずつ配るのを7回繰り返す
+    for (let i = 0; i < 7; i++) {
+      for (const pid of playerIds) {
+        // 山札(deck)の一番後ろから1枚取り出し、その人の手札(hand)に追加する
+        const card = gameState.deck.pop(); 
+        gameState.players[pid].hand.push(card);
+      }
+    }
+
+    console.log(`ゲーム開始！ 山札の残り: ${gameState.deck.length}枚`);
+
+    // 【追加2】それぞれのプレイヤーに「自分の手札だけ」をこっそり送る
+    for (const pid of playerIds) {
+      const myHand = gameState.players[pid].hand;
+      
+      // ★ io.to(pid).emit() を使うことで、特定の人だけにデータを送る（情報の隠蔽）
+      io.to(pid).emit('game_started', myHand);
+    }
   });
 
   // --- 4. 切断時の処理 ---
