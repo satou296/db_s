@@ -6,7 +6,10 @@
   <body>
     <div id="lobby">
       <h2>ロビー</h2>
-      <button id="start-btn">ゲーム開始</button>
+      <p>現在の人数: <span id="player-count">0</span> / 4 人</p>
+      <p id="error-message" style="color: red;"></p>
+      
+      <button id="start-btn" disabled>ゲーム開始</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -14,7 +17,6 @@
     <script>
         // ↓ ここに書きます！これが「サーバーに接続して！」という命令です。
         const socket = io();
-
         // サーバーから人数の更新があったら
         socket.on('lobby_update', (count) => {
         document.getElementById('player-count').textContent = count;
