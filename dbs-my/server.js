@@ -61,25 +61,30 @@ io.on('connection', (socket) => {
     // ゲーム開始！
     gameState.status = 'playing';
     gameState.deck = shuffleDeck(createDeck());
-    
-    // 【追加1】全員に7枚ずつカードを配る
-    // トランプのように、1周ごとに1人1枚ずつ配るのを7回繰り返す
+
+    // 【追加1】全員に7枚ずつカードを配る（前回のまま）
     for (let i = 0; i < 7; i++) {
       for (const pid of playerIds) {
-        // 山札(deck)の一番後ろから1枚取り出し、その人の手札(hand)に追加する
         const card = gameState.deck.pop(); 
         gameState.players[pid].hand.push(card);
       }
     }
 
-    console.log(`ゲーム開始！ 山札の残り: ${gameState.deck.length}枚`);
+      // ★【新規追加】山札から1枚めくって、最初の捨て札にする
+      const firstCard = gameState.deck.pop();
+      gameState.discardPile.push(firstCard);
 
-    // 【追加2】それぞれのプレイヤーに「自分の手札だけ」をこっそり送る
+      console.log(`ゲーム開始！ 最初のカードは ${firstCard.color} の ${firstCard.value} です。`);
+
+    // ★【修正】それぞれのプレイヤーに「自分の手札」と「場のカード」の両方を送る
     for (const pid of playerIds) {
       const myHand = gameState.players[pid].hand;
       
-      // ★ io.to(pid).emit() を使うことで、特定の人だけにデータを送る（情報の隠蔽）
-      io.to(pid).emit('game_started', myHand);
+      // 複数のデータを送るため、{}（オブジェクト）で包んで送ります
+      io.to(pid).emit('game_started', {
+        hand: myHand,
+        topCard: firstCard
+      });
     }
   });
 
