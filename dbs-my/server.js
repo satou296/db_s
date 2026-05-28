@@ -1,4 +1,4 @@
-const { createDeck, shuffleDeck } = require('./gameLogic');
+const { createDeck, shuffleDeck, isPlayable } = require('./gameLogic');
 
 const express = require('express');
 const app = express();
@@ -62,7 +62,7 @@ io.on('connection', (socket) => {
     gameState.status = 'playing';
     gameState.deck = shuffleDeck(createDeck());
 
-    // 【追加1】全員に7枚ずつカードを配る（前回のまま）
+    // 全員に7枚ずつカードを配る（前回のまま）
     for (let i = 0; i < 7; i++) {
       for (const pid of playerIds) {
         const card = gameState.deck.pop(); 
@@ -70,13 +70,13 @@ io.on('connection', (socket) => {
       }
     }
 
-      // ★【新規追加】山札から1枚めくって、最初の捨て札にする
+      // 山札から1枚めくって、最初の捨て札にする
       const firstCard = gameState.deck.pop();
       gameState.discardPile.push(firstCard);
 
       console.log(`ゲーム開始！ 最初のカードは ${firstCard.color} の ${firstCard.value} です。`);
 
-    // ★【修正】それぞれのプレイヤーに「自分の手札」と「場のカード」の両方を送る
+    // それぞれのプレイヤーに「自分の手札」と「場のカード」の両方を送る
     for (const pid of playerIds) {
       const myHand = gameState.players[pid].hand;
       
@@ -85,6 +85,30 @@ io.on('connection', (socket) => {
         hand: myHand,
         topCard: firstCard
       });
+    }
+  });
+
+  // --- 5. プレイヤーがカードを出そうとした時 ---
+  socket.on('play_card', (cardIndex) => {
+    if (gameState.status !== 'playing') return;
+
+    const player = gameState.players[socket.id];
+    
+    // 出そうとしているカードと、現在の一番上の場のカードを取得
+    const playedCard = player.hand[cardIndex];
+    const topCard = gameState.discardPile[gameState.discardPile.length - 1];
+
+    // ルールチェック
+    if (isPlayable(playedCard, topCard)) {
+      // 出せる場合：手札から消して、捨て札の山に追加する
+      player.hand.splice(cardIndex, 1);
+      gameState.discardPile.push(playedCard);
+
+      // 全員に「画面を更新して！」と最新情報を送る
+      sendGameState();
+    } else {
+      // 出せない場合：その人にだけエラーを送る
+      socket.emit('action_error', 'そのカードは出せません！');
     }
   });
 
@@ -108,6 +132,20 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+// 現在参加している全員に、それぞれの最新データを送る関数
+function sendGameState() {
+  const topCard = gameState.discardPile[gameState.discardPile.length - 1];
+  
+  for (const pid of Object.keys(gameState.players)) {
+    const myHand = gameState.players[pid].hand;
+    // 'update_game_state' という名前で送信
+    io.to(pid).emit('update_game_state', {
+      hand: myHand,
+      topCard: topCard
+    });
+  }
+}
 
 // --- サーバーの起動 ---
 const PORT = process.env.PORT || 3000;

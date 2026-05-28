@@ -30,8 +30,22 @@ function shuffleDeck(deck) {
   return deck;
 }
 
+// 場に出せるカードかどうかを判定する関数
+function isPlayable(playedCard, topCard) {
+  // ワイルドカード（黒）はいつでも出せる
+  if (playedCard.color === 'wild') return true;
+  // 色が同じなら出せる
+  if (playedCard.color === topCard.color) return true;
+  // 数字や記号（スキップなど）が同じなら出せる
+  if (playedCard.value === topCard.value) return true;
+  
+  // 上記のどれにも当てはまらない場合は出せない
+  return false;
+}
+
 // ここが重要！他のファイルから呼び出せるように「公開」する
 module.exports = {
   createDeck,
-  shuffleDeck
+  shuffleDeck,
+  isPlayable
 };
