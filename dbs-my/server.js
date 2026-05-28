@@ -17,6 +17,9 @@ let gameState = {
   players: {},       // 参加しているプレイヤー情報
   deck: [],          // 山札
   discardPile: [],   // 捨て札
+  turnOrder: [],       // プレイヤーの順番（socket.idの配列）
+  currentTurnIndex: 0, // 現在、配列の何番目の人のターンか
+  direction: 1         // 1なら時計回り、-1なら反時計回り（リバース用）
 };
 
 // --- Webサーバーの設定 ---
@@ -61,8 +64,13 @@ io.on('connection', (socket) => {
     // ゲーム開始！
     gameState.status = 'playing';
     gameState.deck = shuffleDeck(createDeck());
+    
+    // ★ターンの初期設定
+    gameState.turnOrder = playerIds; 
+    gameState.currentTurnIndex = 0; // 0番目の人からスタート
+    gameState.direction = 1;        // 時計回り
 
-    // 全員に7枚ずつカードを配る（前回のまま）
+    // 全員に7枚ずつカードを配る
     for (let i = 0; i < 7; i++) {
       for (const pid of playerIds) {
         const card = gameState.deck.pop(); 
@@ -70,20 +78,23 @@ io.on('connection', (socket) => {
       }
     }
 
-      // 山札から1枚めくって、最初の捨て札にする
-      const firstCard = gameState.deck.pop();
-      gameState.discardPile.push(firstCard);
+    // 山札から1枚めくって、最初の捨て札にする
+    const firstCard = gameState.deck.pop();
+    gameState.discardPile.push(firstCard);
 
-      console.log(`ゲーム開始！ 最初のカードは ${firstCard.color} の ${firstCard.value} です。`);
+    // ★修正：最初のターンが誰かを判定しつつ、全員に「ゲーム開始」を送る
+    const currentTurnPlayerId = gameState.turnOrder[gameState.currentTurnIndex];
 
-    // それぞれのプレイヤーに「自分の手札」と「場のカード」の両方を送る
     for (const pid of playerIds) {
       const myHand = gameState.players[pid].hand;
       
-      // 複数のデータを送るため、{}（オブジェクト）で包んで送ります
+      // ★エラーの原因解決：ここで isMyTurn を定義してあげる
+      const isMyTurn = (pid === currentTurnPlayerId);
+      
       io.to(pid).emit('game_started', {
         hand: myHand,
-        topCard: firstCard
+        topCard: firstCard,
+        isMyTurn: isMyTurn
       });
     }
   });
@@ -103,6 +114,11 @@ io.on('connection', (socket) => {
       // 出せる場合：手札から消して、捨て札の山に追加する
       player.hand.splice(cardIndex, 1);
       gameState.discardPile.push(playedCard);
+
+      //ターンを次の人に回す
+      // (現在のインデックス + 方向 + 人数) % 人数 で、最後の人の次は最初の人に戻るように計算します
+      const numPlayers = gameState.turnOrder.length;
+      gameState.currentTurnIndex = (gameState.currentTurnIndex + gameState.direction + numPlayers) % numPlayers;
 
       // 全員に「画面を更新して！」と最新情報を送る
       sendGameState();
@@ -136,13 +152,18 @@ io.on('connection', (socket) => {
 // 現在参加している全員に、それぞれの最新データを送る関数
 function sendGameState() {
   const topCard = gameState.discardPile[gameState.discardPile.length - 1];
+  const currentTurnPlayerId = gameState.turnOrder[gameState.currentTurnIndex];
   
   for (const pid of Object.keys(gameState.players)) {
     const myHand = gameState.players[pid].hand;
-    // 'update_game_state' という名前で送信
+    
+    // この人が現在のターンの人かチェック
+    const isMyTurn = (pid === currentTurnPlayerId); 
+
     io.to(pid).emit('update_game_state', {
       hand: myHand,
-      topCard: topCard
+      topCard: topCard,
+      isMyTurn: isMyTurn
     });
   }
 }

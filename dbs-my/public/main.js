@@ -17,27 +17,42 @@ socket.on('join_error', (msg) => {
   document.getElementById('error-message').textContent = msg;
 });
 
-// 画面にカードを並べる処理をまとめた関数
 function renderGame(data) {
-  // 1. 手札の表示
+  // ターン表示の切り替え
+  const turnIndicator = document.getElementById('turn-indicator');
+  if (data.isMyTurn) {
+    turnIndicator.textContent = 'あなたのターンです！カードを出してください。';
+    turnIndicator.style.backgroundColor = '#ffeb3b'; // 目立つ黄色
+    turnIndicator.style.color = 'black';
+  } else {
+    turnIndicator.textContent = '相手のターンを待っています...';
+    turnIndicator.style.backgroundColor = '#95a5a6'; // 待機っぽいグレー
+    turnIndicator.style.color = 'white';
+  }
+
   const handContainer = document.getElementById('my-hand');
   handContainer.innerHTML = ''; 
 
   // 何番目のカードか（index）を取得できるようにする
   data.hand.forEach((cardData, index) => {
-    const cardElement = createCardElement(cardData);
-    
     // カードをクリックできるようにする
-    cardElement.style.cursor = 'pointer'; // マウスカーソルを指マークに
+    const cardElement = createCardElement(cardData);
+    cardElement.style.cursor = 'pointer';
+    
+    // クリック処理を修正
     cardElement.addEventListener('click', () => {
+      // 自分のターンじゃない時は送信せず、その場で弾く
+      if (!data.isMyTurn) {
+        alert('今は相手のターンです！');
+        return;
+      }
       // サーバーへ「〇番目のカードを出したい」と送信する
       socket.emit('play_card', index);
     });
 
     handContainer.appendChild(cardElement);
   });
-
-  // 2. 場のカード（捨て札）の表示
+  // 場のカード（捨て札）の表示
   const discardContainer = document.getElementById('discard-pile');
   discardContainer.innerHTML = '';
   const topCardElement = createCardElement(data.topCard);
